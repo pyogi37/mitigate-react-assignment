@@ -19,6 +19,7 @@ import {
     FiArrowDown
 } from "react-icons/fi";
 
+// interface for the data object
 interface Data {
     id: number;
     name: string;
@@ -29,12 +30,20 @@ interface Data {
 }
 
 const TableComponent: React.FC = () => {
+    // State for search input
     const [search, setSearch] = useState("");
+    // State for status filter dropdown
     const [statusFilter, setStatusFilter] = useState("");
+    // State for date filter
     const [dateFilter, setDateFilter] = useState<Date | null>(null);
+    // State for sorting (managed by react-table)
     const [sorting, setSorting] = useState<SortingState>([]);
+    // Flag to indicate if a page change occurred (used to prevent infinite scroll from triggering on page changes)
     const [pageChange, setPageChange] = useState(false);
+    // State for the user data (initialized with dummy data)
     const [data, setData] = useState<Data[]>(
+
+        // data generation logic
         Array.from({ length: 100 }, (_, i) => ({
             id: i + 1,
             name: `User ${i + 1}`,
@@ -44,6 +53,8 @@ const TableComponent: React.FC = () => {
             invitedBy: "Ankit Mehta",
         }))
     );
+
+    // stats calculation
     const stats = useMemo(() => {
         const total = data.length;
         return {
@@ -53,6 +64,8 @@ const TableComponent: React.FC = () => {
             blocked: Math.round((data.filter((user) => user.status === "Blocked").length / total) * 100) + '%'
         };
     }, [data]);
+
+    // infinite scrolling logic
 
     const [visibleRows, setVisibleRows] = useState(10);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -67,6 +80,8 @@ const TableComponent: React.FC = () => {
         setPageChange(false);
     };
 
+
+    // pagination handling
     const handlePageChange = (action: 'next' | 'previous') => {
         if (action === 'next' && table.getCanNextPage()) {
             table.nextPage();
@@ -76,15 +91,16 @@ const TableComponent: React.FC = () => {
 
         containerRef.current?.scrollTo({
             top: 0,
-            behavior: 'instant'
+            behavior: 'smooth'
         });
 
-        setPageChange(true);
-
         // Reset visible rows and scroll to top
+        setPageChange(true);
         setVisibleRows(5);
     };
 
+
+    //Column Definitions
     const columns: ColumnDef<Data>[] = useMemo(
         () => [
             {
@@ -174,25 +190,40 @@ const TableComponent: React.FC = () => {
     }, [pagination.pageIndex]);
 
 
+    // Filtering Logic
     const filteredData = useMemo(() => {
-        let filtered = data.filter((user) => {
-            const matchesSearch =
-                search === "" ||
-                user.name.toLowerCase().includes(search.toLowerCase()) ||
-                user.email.toLowerCase().includes(search.toLowerCase());
+        const filtered = data.filter((user) => {
+            // const matchesSearch =
+            //     search === "" ||
+            //     user.name.toLowerCase().includes(search.toLowerCase()) ||
+            //     user.email.toLowerCase().includes(search.toLowerCase()) ||
+            //     user.invitedBy.toLowerCase().includes(search.toLowerCase());
+
+            const stringResult = JSON.stringify(user);
+            // console.log(stringResult);
+
+            const matchesSearch = search === "" || stringResult.toLowerCase().includes(search.toLowerCase());
+
+            const dateString = user.startDate.toDateString();
+            const dateMatch = search==="" || dateString.toLowerCase().includes(search.toLowerCase());
+            
 
             const matchesStatus = statusFilter === "" || user.status === statusFilter;
 
             const matchesDate =
                 !dateFilter || user.startDate.toDateString() === dateFilter.toDateString();
 
-            return matchesSearch && matchesStatus && matchesDate;
+            return (matchesSearch || dateMatch) && matchesStatus && matchesDate;
         });
+
+        console.log(filtered);
 
         return filtered;
 
-    }, [data, search, statusFilter, dateFilter]);
+    }, [data, search, statusFilter, dateFilter, dateFilter]);
 
+
+    // react table configuration
     const table = useReactTable({
         data: filteredData,
         columns,
@@ -211,6 +242,7 @@ const TableComponent: React.FC = () => {
         enableSorting: true,
     });
 
+    // csv download logic
     const handleDownload = () => {
         const csvContent =
             "data:text/csv;charset=utf-8,Name,Email,Status,Start Date,Invited By\n" +
